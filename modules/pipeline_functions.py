@@ -208,12 +208,16 @@ def get_header(file,keyword=None):
 ############################################################
 
 def get_pixel_scale(fitsfile):
-    header = get_fits_header(fitsfile)
-    pixel_scale1 = np.sqrt((abs(header['CD1_1'])*3600)**2 + (abs(header['CD2_1'])*3600)**2)
-    pixel_scale2 = np.sqrt((abs(header['CD1_2'])*3600)**2 + (abs(header['CD2_2'])*3600)**2)
-    pixel_scale = 0.5*(pixel_scale1+pixel_scale2)
-    #print (pixel_scale,pixel_scale1,pixel_scale2)
-    pixel_scale = (int(pixel_scale*100+0.49999))/100
+    try:
+        header = get_fits_header(fitsfile)
+        pixel_scale1 = np.sqrt((abs(header['CD1_1'])*3600)**2 + (abs(header['CD2_1'])*3600)**2)
+        pixel_scale2 = np.sqrt((abs(header['CD1_2'])*3600)**2 + (abs(header['CD2_2'])*3600)**2)
+        pixel_scale = 0.5*(pixel_scale1+pixel_scale2)
+        #print (pixel_scale,pixel_scale1,pixel_scale2)
+        pixel_scale = (int(pixel_scale*100+0.49999))/100
+    except:
+        header = get_fits_header(fitsfile)
+        pixel_scale = np.sqrt((abs(header['CDELT1'])*3600)**2 + (abs(header['CDELT2'])*3600)**2)*0.5
     return pixel_scale
 
 ############################################################
@@ -516,7 +520,7 @@ def make_fancy_png(fitsfile,pngfile,text='',zoom=1, mode='lsb', cmap='gist_gray'
     ax.imshow((image0z),cmap=cmap)
     ax.invert_yaxis()
     #ax.text(int(X*0.05),int(Y*0.90),text,color='red',fontsize=50)
-    fig.savefig(pngfile+'.log.zoom.png',dpi=150)
+    #fig.savefig(pngfile+'.log.zoom.png',dpi=150)
 
     ###
 

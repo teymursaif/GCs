@@ -1,5 +1,6 @@
 import os, sys
 import numpy as np
+import matplotlib.pyplot as plt
 
 def initialize_params() :
     print (f"{bcolors.OKCYAN}- Initializing the pipeline ... "+ bcolors.ENDC)
@@ -12,9 +13,10 @@ def initialize_params() :
     global PRIMARY_FRAME_SIZE_ARCSEC, FRAME_SIZE_ARCSEC, GAL_FRAME_SIZE_ARCSEC, N_ART_GCS, N_SIM_GCS, PSF_IMAGE_SIZE, INSTR_FOV, COSMIC_CLEAN, \
     PHOTOM_APERS, FWHMS_ARCSEC, APERTURE_SIZE, PSF_REF_RAD_FRAC, BACKGROUND_ANNULUS_START, BACKGROUND_ANNULUS_TICKNESS, TARGETS, APERTURE_SIZE, \
     MAG_LIMIT_CAT, CROSS_MATCH_RADIUS_ARCSEC, GC_SIZE_RANGE, GC_MAG_RANGE, RATIO_OVERSAMPLE_PSF, PSF_PIXEL_SCALE, PSF_SIZE, MODEL_PSF, \
-    PIXEL_SCALES, ZPS, PRIMARY_FRAME_SIZE, FRAME_SIZE, GAL_FRAME_SIZE, EXPTIME, GAIN, GC_REF_MAG, PSF_PIXELSCL_KEY, FWHM_LIMIT, INPUT_ZP, INPUT_EXPTIME, \
+    PIXEL_SCALES, ZPS, PRIMARY_FRAME_SIZE, FRAME_SIZE, GAL_FRAME_SIZE, EXPTIME, GAIN, GC_REF_MAG, PSF_PIXELSCL_KEY, FWHM_LIMIT, INPUT_ZP, INPUT_EXPTIME, INPUT_GAIN, \
     MAG_LIMIT_SAT, MAG_LIMIT_PSF, GC_SEL_PARAMS, ELL_LIMIT_PSF, GC_SIM_MODE, MERGE_CATS, MERGE_SIM_GC_CATS, MERGE_GC_CATS, EXTRACT_DWARFS,\
-    PARAM_SEL_METHOD, PARAM_SEL_RANGE, EXTERNAL_CROSSMATCH, EXTERNAL_CROSSMATCH_CAT, MAG_LIMIT_FILTER 
+    PARAM_SEL_METHOD, PARAM_SEL_RANGE, EXTERNAL_CROSSMATCH, EXTERNAL_CROSSMATCH_CAT, PARAM_ADD_UPPER, PARAM_ADD_LOWER, APER_SIZE_IN_FWHM,\
+    PARAM_PERCENTILE_LOWER, PARAM_PERCENTILE_UPPER, PARAM_DESC, MEDIAN_FILTER_SIZE
     global SE_executable,galfit_executable,swarp_executable
 
     FWHMS_ARCSEC = {}
@@ -51,9 +53,9 @@ def initialize_params() :
     #swarp_executable = 'SWarp'
 
     ### (if ZP, EXPTIME and GAIN are missing from the header, define them for a given filter)
-    INPUT_ZP = {'VIS':30,'NISP-Y':30,'NISP-J':30,'NISP-H':30}
-    INPUT_EXPTIME = {'VIS':565,'NISP-Y':81,'NISP-J':81,'NISP-H':81}
-    INPUT_GAIN = {'VIS':2,'NISP-Y':1,'NISP-J':1,'NISP-H':1}
+    INPUT_ZP = {'VIS-DET':30.1,'VIS':30.1,'NISP-Y':30,'NISP-J':30,'NISP-H':30}
+    INPUT_EXPTIME = {'VIS-DET':1,'VIS':1,'NISP-Y':1,'NISP-J':1,'NISP-H':1}
+    INPUT_GAIN = {'VIS-DET':2,'VIS':2,'NISP-Y':1,'NISP-J':1,'NISP-H':1}
 
     # ------------------------------ GALAXIES/TARGETS ------------------------------
 
@@ -84,31 +86,48 @@ def initialize_params() :
     from astropy.io import fits
     frame = main_data_dir+'/ERO-PERSEUS_VIS.fits'
     main = fits.open(frame)
+    data = main[0].data
     hdr = main[0].header
     X = hdr['NAXIS1']
     Y = hdr['NAXIS2']
     S = np.max([X,Y])
-    w=WCS(frame)
-    N = 3
-    PRIMARY_FRAME_SIZE_ARCSEC = int(S/N/10)+100
-    FRAME_SIZE_ARCSEC = int(S/N/10)+100
+    W=WCS(frame)
+    N = 20
+    PRIMARY_FRAME_SIZE_ARCSEC = int(S/N/10)+5
+    FRAME_SIZE_ARCSEC = int(S/N/10)+5
+    FRAME_SIZE_PIXELS = FRAME_SIZE_ARCSEC*10
     print (FRAME_SIZE_ARCSEC)
     for j in range(N):
         for i in range(N):
             m = (j*N+i)
             xc =  (i) * (X/N) + (X/N)/2.
             yc =  (j) * (Y/N) + (Y/N)/2.
-            ra, dec = w.all_pix2world(yc,xc,0)
+            ra, dec = W.all_pix2world(yc,xc,0)
             #if m in [3,4,5,7,0,2,6,8] : #[1,3,4,5,7]  [0,2,6,8] 
-            if m in [0,1,3,4,5,7,0,2,6,8]:
-                target_str = str(m)+' ERO-PERSEUS ERO-PERSEUS-'+str(m)+' '+str(ra)+' '+str(dec)+' 70 VIS,NISP-Y,NISP-J,NISP-H MAKE_CAT,SIM_GC,MAKE_GC_CAT ---' #MAKE_CAT,SIM_GC, ,NISP-Y,NISP-J,NISP-H
-                TARGETS.append([target_str])
+            if m>=-1: #0,1,2,3,4,5,6,7,8
+                target_str = str(m)+' ERO-PERSEUS ERO-PERSEUS-'+str(m)+' '+str(ra)+' '+str(dec)+' 73 VIS,NISP-Y,NISP-J,NISP-H MAKE_GC_CAT ---' #MAKE_CAT,SIM_GC, ,NISP-Y,NISP-J,NISP-H
+                
+                print ('checking freame '+str(m)+'...')
+                w = FRAME_SIZE_PIXELS/2-10
+                cropped_data = data[int(xc-w):int(xc+w),int(yc-w):int(yc+w)]
+                #plt.imshow(cropped_data,vmin=-10,vmax=10)
+                #plt.savefig('test.png')
+                cropped_data_nonzero = cropped_data[abs(cropped_data)>1e-10]
+                N_nenzero_pixels = len(cropped_data_nonzero)
+                #print (median_pixel_value)
+                
+                if (N_nenzero_pixels) > 25000 :
+                    print (N_nenzero_pixels)
+                    TARGETS.append([target_str])
+                else:
+                    print (N_nenzero_pixels)
+                    print (f"{bcolors.FAIL}*** Frame looks empty, skipping the frame..."+ bcolors.ENDC)
             #print (target_str)
 
     print (TARGETS)
 
-    MERGE_CATS = True
-    MERGE_SIM_GC_CATS = True
+    MERGE_CATS = False
+    MERGE_SIM_GC_CATS = False
     MERGE_GC_CATS = True
 
     # NOTE: possible methods -> RESAMPLE_DATA, MODEL_PSF, FIT_GAL, USE_SUB_GAL, MAKE_CAT, MAKE_GC_CAT
@@ -126,11 +145,13 @@ def initialize_params() :
 
     # ---------------------- SOURCE DETECTION AND PHOTOMETRY ----------------------
 
+    MEDIAN_FILTER_SIZE = 3
     PHOTOM_APERS = '1,2,4,8,12,16,20,30,40' #aperture-sizes (diameters) in pixels for aperture photometry with Sextractor
-    BACKGROUND_ANNULUS_START = 3 #The size of background annulus for forced photoemtry as a factor of FWHM
+    BACKGROUND_ANNULUS_START = 5 #The size of background annulus for forced photoemtry as a factor of FWHM
     BACKGROUND_ANNULUS_TICKNESS = 20 # the thickness of the background annulus in pixels
     CROSS_MATCH_RADIUS_ARCSEC = 0.25
-    MAG_LIMIT_CAT = 27
+    APER_SIZE_IN_FWHM = {'VIS-DET':1.5,'VIS':1.5,'NISP-Y':1.5,'NISP-J':1.5,'NISP-H':1.5}
+    MAG_LIMIT_CAT = 28.0
     EXTRACT_DWARFS = False
 
     # -------------------------------- PSF MODELING -------------------------------
@@ -141,32 +162,42 @@ def initialize_params() :
     ### for making PSF (method=MODEL_PSF)
     MODEL_PSF = True
     RATIO_OVERSAMPLE_PSF = 10 #do not go beyond 10, this will have consequences for undersampling later
-    PSF_IMAGE_SIZE = 40 #PSF size in the instruments pixel-scale
-    MAG_LIMIT_PSF = 21 #19 for NISP
-    MAG_LIMIT_SAT = 19 #17 for NISP #saturation limit
+    PSF_IMAGE_SIZE = 100 #PSF size in the instruments pixel-scale
+    MAG_LIMIT_PSF = 21
+    MAG_LIMIT_SAT = 19
     ELL_LIMIT_PSF = 0.1
     #FWHM_UPPER_LIMIT_PSF =
     #FWHM_LOWER_LIMIT_PSF =
 
 
     #------------------------------ GC SIMULATION ------------------------------
-    N_ART_GCS = 250
+    N_ART_GCS = 670
     N_SIM_GCS = 1
     COSMIC_CLEAN = False #does not work at the moment anyways...
-    GC_SIZE_RANGE = [2,2.001] #lower value should be small enough to make some point-sources for performance check, in pc
+    GC_SIZE_RANGE = [1,1.01] #lower value should be small enough to make some point-sources for performance check, in pc
     GC_MAG_RANGE = [-12,-5]
-    GC_REF_MAG = {'VIS':-8, 'NISP-Y':-8.3,'NISP-J':-8.3,'NISP-H':-8.3 } #magnitude of a typical GC in the given filters should be defined here.
+    GC_REF_MAG = {'VIS-DET':-8,'VIS':-8,'NISP-Y':-8.45,'NISP-J':-8.45,'NISP-H':-8.45 } #magnitude of a typical GC in the given filters should be defined here.
     GC_SIM_MODE = 'UNIFORM' # 'UNIFORM' or 'CONCENTRATED'
 
     #------------------------------ GC SELECTION -------------------------------
 
-    GC_SEL_PARAMS = ['CI_2_4','CI_4_8','CI_8_12']#,'CI_2_4','CI_4_6','CI_6_8','CI_8_10','CI_10_12','ELLIPTICITY']
-    EXTERNAL_CROSSMATCH = False
-    EXTERNAL_CROSSMATCH_CAT = None #'./archival_tables/ERO-FDS-ugriJKs.fits'
+    GC_SEL_PARAMS = ['CI_2_4_VIS','ELLIPTICITY_VIS',['F_MAG_APER_CORR_VIS','F_MAG_APER_CORR_NISP-Y'],['F_MAG_APER_CORR_NISP-Y','F_MAG_APER_CORR_NISP-J'],\
+                        ['F_MAG_APER_CORR_NISP-J','F_MAG_APER_CORR_NISP-H']]#,'CI_4_8','CI_8_12']#,'CI_2_4','CI_4_6','CI_6_8','CI_8_10','CI_10_12','ELLIPTICITY']
+    PARAM_DESC = ['compactness','ellipticity','color','color','color']
+    PARAM_ADD_LOWER = [-0.1,-0.1,-0.3,-0.15,-0.15]
+    PARAM_ADD_UPPER = [-0.1,0.0,0.3,0.15,0.15]
+    PARAM_PERCENTILE_LOWER = [5,1,1,1,1]
+    PARAM_PERCENTILE_UPPER = [95,99,99,99,99]
+
+
+    EXTERNAL_CROSSMATCH = True
+    EXTERNAL_CROSSMATCH_CAT = './archival_tables/PERSEUS/ERO-PERSEUS-CFHT.fits'
 
     PARAM_SEL_METHOD = 'MANUAL'
-    PARAM_SEL_RANGE = {'ELLIPTICITY':[0,0.4],'F_MAG_APER_CORR':[23,28],'F_MAG_APER_CORR_NISP-Y':[15,30],\
-    'color0':['VIS','VIS',-0.5,0.5],'color1':['VIS','NISP-Y',-0.1,0.7],'color2':['NISP-Y','NISP-J',-1,1],'color3':['NISP-J','NISP-H',-1,1]} #\
+    PARAM_SEL_RANGE = {'ELLIPTICITY':[-0.01,1.01],'F_MAG_APER_CORR_VIS':[22,28],'color0':['VIS','VIS',-0.5,0.5],'CI_2_4_VIS':[-10,10]}#,\
+    #'color1':['VIS','NISP-Y',-2,3],'color2':['NISP-Y','NISP-J',-2,2],'color3':['NISP-J','NISP-H',-2,2]}#,\
+   # 'color5':['u','i',1.0,4.0], 'color6':['g','i',0.5,2.5], 'color7':['r','i',0,1], 'color8':['i','k',1,3.5]}   # clean selection
+
 
     ####################################################################################################
     ####################################################################################################
@@ -198,6 +229,9 @@ def initialize_params() :
     external_dir = input_dir+'external/'
     data_dir_orig = data_dir
     galfit_executable = external_dir+'galfit'
+
+    global log_file
+    log_file = './perseus.LOG'
 
     for dir in [working_directory,input_dir,output_dir,data_dir,main_data_dir,clean_data_dir,img_dir,sex_dir,fit_dir,plots_dir,\
     detection_dir,cats_dir,psfs_dir,art_dir,final_cats_dir,temp_dir,sbf_dir,psf_dir,check_plots_dir,sub_data_dir] :

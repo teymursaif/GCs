@@ -23,6 +23,7 @@ from photutils.centroids import centroid_1dg, centroid_2dg, centroid_com, centro
 import time as TIME
 from modules.initialize import *
 from modules.pipeline_functions import *
+from scipy.ndimage import median_filter
 
 class bcolors:
     HEADER = '\033[95m'
@@ -35,9 +36,7 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
-def select_gcs_for_param(param_sources,mag_sources,param_det_art_gcs,mag_det_art_gcs,label=''):
-
-    N = len(param_sources)
+def select_gcs_for_param(param_sources,mag_sources,param_det_art_gcs,mag_det_art_gcs,add_upper,add_lower,percentile_upper,percentile_lower,keep_bad_values=0,label=''):
     mask = []
 
     #cat1 = open(cats_dir+'compactness_range_lower_limit_'+label+'.csv', 'w')
@@ -47,28 +46,81 @@ def select_gcs_for_param(param_sources,mag_sources,param_det_art_gcs,mag_det_art
     upper_limits = np.zeros(len(mag_range))-99
     lower_limits = np.zeros(len(mag_range))-99
 
+    #mask_obs = ((abs(mag_sources)<30) & (abs(param_sources)<30))
+    mask_art = ((abs(mag_det_art_gcs)<30) & (abs(param_det_art_gcs)<30)) 
+    
+    #param_sources = param_sources[mask_obs]
+    #mag_sources = mag_sources[mask_obs]
+
+    param_det_art_gcs = param_det_art_gcs[mask_art]
+    mag_det_art_gcs = mag_det_art_gcs[mask_art]
+
+    plt.plot(param_det_art_gcs,mag_det_art_gcs,'k.',alpha=0.01)
+
+    N = len(param_sources)
+
     for mag in mag_range:
 
         j = int((mag-np.min(mag_range))/0.1+0.5)
 
         #print (mag,j)
 
-        m = mag_det_art_gcs[abs(mag_det_art_gcs-mag)<4]
-        p = param_det_art_gcs[abs(mag_det_art_gcs-mag)<4]
+        m = mag_det_art_gcs[abs(mag_det_art_gcs-mag)<0.5]
+        p = param_det_art_gcs[abs(mag_det_art_gcs-mag)<0.5]
 
         p = sigma_clip(p, 3, masked=False)
 
         if len(p) < 20:
             lower_limits[j] = -99
             upper_limits[j] = -99
-        else: 
-            lower_limits[j] = (np.percentile(p, 0.05))
-            upper_limits[j] = (np.percentile(p, 99.))+0.05
+        else:
+            try : 
+                lower_limits[j] = (np.percentile(p, percentile_lower))+add_lower
+            except :
+                lower_limits[j] = (np.percentile(p, 1))-0.0
+            try :
+            	upper_limits[j] = (np.percentile(p, percentile_upper))+add_upper
+            except:
+                upper_limits[j] = (np.percentile(p, 99.0))+0.0
+    
+    for mag in mag_range:
+
+        j = int((mag-np.min(mag_range))/0.1+0.5)
+
+        if lower_limits[j] < -90 :
+            lower_limits[j] = np.nanmax(lower_limits)
+
+        if upper_limits[j] < -90 :
+            upper_limits[j] = np.nanmin(upper_limits[upper_limits>-90])
 
     
-        plt.plot(lower_limits,mag_range,'k.')
-        plt.plot(upper_limits,mag_range,'k.')
-        plt.xlim([-0.5,1.5])
+    lower_limits = median_filter(lower_limits, size=5, cval=0, mode='constant')
+    upper_limits = median_filter(upper_limits, size=5, cval=0, mode='constant')
+
+    plt.plot(lower_limits,mag_range,'k.')
+    plt.plot(upper_limits,mag_range,'k.')
+    #plt.xlim([-0.5,1.5])
+
+    print_str = 'mag_range=['
+    for iii in range(len(mag_range)):
+        print_str = print_str + str(mag_range[iii])+','
+    print_str=print_str[:len(print_str)-1]
+    print_str = print_str +']'
+    print (print_str)
+
+    print_str = 'upper_limits=['
+    for iii in range(len(mag_range)):
+        print_str = print_str + str(upper_limits[iii])+','
+    print_str=print_str[:len(print_str)-1]
+    print_str = print_str +']'
+    print (print_str)
+
+    print_str = 'lower_limits=['
+    for iii in range(len(mag_range)):
+        print_str = print_str + str(lower_limits[iii])+','
+    print_str=print_str[:len(print_str)-1]
+    print_str = print_str +']'
+    print (print_str)
 
 
     for i in range(N):
@@ -94,15 +146,34 @@ def select_gcs_for_param(param_sources,mag_sources,param_det_art_gcs,mag_det_art
         param_lower_limit = lower_limits[j] #param_median-2.0*param_std-0.05
         param_upper_limit = upper_limits[j] #param_median+2.0*param_std+0.05
 
-        if (param > param_lower_limit) and (param < param_upper_limit) :
-            mask.append(1)
-            plt.plot(param,mag,'r.',alpha=0.2)
-        else :
-            mask.append(0) #0
-            plt.plot(param,mag,'k.',alpha=0.2)
+        if keep_bad_values == 0 :
+
+            if (param > param_lower_limit) and (param < param_upper_limit) and (abs(mag) < 50):
+                mask.append(1)
+                plt.plot(param,mag,'g.',alpha=0.2)
+            else :
+                mask.append(0) #0
+                plt.plot(param,mag,'r.',alpha=0.2)
+
+        if keep_bad_values == 1 :
+
+            if (param > param_lower_limit) and (param < param_upper_limit) and (abs(mag) < 50):
+                mask.append(1)
+                plt.plot(param,mag,'g.',alpha=0.2)
+
+            elif (abs(param) > 50) and (abs(mag) < 50):
+                mask.append(1)
+                plt.plot(param,mag,'b.',alpha=0.2)
+
+            else :
+                mask.append(0) #0
+                plt.plot(param,mag,'r.',alpha=0.2)
 
 
-    plt.savefig(check_plots_dir+'compactness_range_'+label+'.png')
+
+    plt.savefig(check_plots_dir+'parameter_range_'+label+'.png')
+    plt.xlim([-1,1])
+    plt.savefig(check_plots_dir+'parameter_range_'+label+'+xlim.png')
     plt.close()
 
     #cat1.close()
@@ -144,17 +215,54 @@ def select_GC_candidadates(gal_id):
 
     selected_gcs_mask = np.ones(len(sources))
 
-    for param in GC_SEL_PARAMS:
+    N_param = len(GC_SEL_PARAMS)
+
+    for i in range(N_param):
+        param = GC_SEL_PARAMS[i]
+        param_desc = PARAM_DESC[i]
         print (param)
-        #param = param + '_' + fn_det
-        #param_art_gcs = art_gcs[param]
-        param_det_art_gcs = det_art_gcs[param]
-        param_sources = sources[param]
-        #mag_art_gcs = art_gcs[mag_param]
-        mag_det_art_gcs = det_art_gcs[mag_param]
-        mag_sources = sources[mag_param]
-        mask = select_gcs_for_param(param_sources,mag_sources,param_det_art_gcs,mag_det_art_gcs,label=param+'+')
-        selected_gcs_mask = selected_gcs_mask * mask
+
+        if param_desc == 'color' :
+
+            param1 = param[0]
+            param2 = param[1]
+            param = param1+'-'+param2
+
+            param1_det_art_gcs = det_art_gcs[param1]
+            param1_sources = sources[param1]
+
+            param2_det_art_gcs = det_art_gcs[param2]
+            param2_sources = sources[param2]
+
+            param_det_art_gcs = param1_det_art_gcs - param2_det_art_gcs
+            param_sources = param1_sources - param2_sources
+
+            mag_det_art_gcs = det_art_gcs[mag_param]
+            mag_sources = sources[mag_param]
+
+            add_upper = PARAM_ADD_UPPER[i]
+            add_lower = PARAM_ADD_LOWER[i]
+            percentile_upper = PARAM_PERCENTILE_UPPER[i]
+            percentile_lower = PARAM_PERCENTILE_LOWER[i]
+            mask = select_gcs_for_param(param_sources,mag_sources,param_det_art_gcs,mag_det_art_gcs,add_upper,add_lower,percentile_upper,percentile_lower,\
+                   keep_bad_values=1,label=param+'+')
+            selected_gcs_mask = selected_gcs_mask * mask
+
+        else : 
+            #param = param + '_' + fn_det
+            #param_art_gcs = art_gcs[param]
+            param_det_art_gcs = det_art_gcs[param]
+            param_sources = sources[param]
+            #mag_art_gcs = art_gcs[mag_param]
+            mag_det_art_gcs = det_art_gcs[mag_param]
+            mag_sources = sources[mag_param]
+            add_upper = PARAM_ADD_UPPER[i]
+            add_lower = PARAM_ADD_LOWER[i]
+            percentile_upper = PARAM_PERCENTILE_UPPER[i]
+            percentile_lower = PARAM_PERCENTILE_LOWER[i]
+            mask = select_gcs_for_param(param_sources,mag_sources,param_det_art_gcs,mag_det_art_gcs,add_upper,add_lower,percentile_upper,percentile_lower,\
+                   keep_bad_values=0,label=param+'+')
+            selected_gcs_mask = selected_gcs_mask * mask
 
     selected_gcs_mask = selected_gcs_mask.astype(np.bool_)
     selected_gcs_data = sources[selected_gcs_mask]

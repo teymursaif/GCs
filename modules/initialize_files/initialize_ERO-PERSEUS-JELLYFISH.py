@@ -13,7 +13,7 @@ def initialize_params() :
     PHOTOM_APERS, FWHMS_ARCSEC, APERTURE_SIZE, PSF_REF_RAD_FRAC, BACKGROUND_ANNULUS_START, BACKGROUND_ANNULUS_TICKNESS, TARGETS, APERTURE_SIZE, \
     MAG_LIMIT_CAT, CROSS_MATCH_RADIUS_ARCSEC, GC_SIZE_RANGE, GC_MAG_RANGE, RATIO_OVERSAMPLE_PSF, PSF_PIXEL_SCALE, PSF_SIZE, MODEL_PSF, \
     PIXEL_SCALES, ZPS, PRIMARY_FRAME_SIZE, FRAME_SIZE, GAL_FRAME_SIZE, EXPTIME, GAIN, GC_REF_MAG, PSF_PIXELSCL_KEY, FWHM_LIMIT, INPUT_ZP, INPUT_EXPTIME, \
-    MAG_LIMIT_SAT, MAG_LIMIT_PSF, GC_SEL_PARAMS, ELL_LIMIT_PSF, GC_SIM_MODE, MERGE_CATS, MERGE_SIM_GC_CATS
+    MAG_LIMIT_SAT, MAG_LIMIT_PSF, EXTRACT_DWARFS, GC_SEL_PARAMS, ELL_LIMIT_PSF, GC_SIM_MODE, MERGE_CATS, MERGE_SIM_GC_CATS, MERGE_GC_CATS
     global SE_executable,galfit_executable,swarp_executable
 
     FWHMS_ARCSEC = {}
@@ -50,9 +50,9 @@ def initialize_params() :
     #swarp_executable = 'SWarp'
 
     ### (if ZP, EXPTIME and GAIN are missing from the header, define them for a given filter)
-    INPUT_ZP = {'VIS':30,'NISP-Y':30,'NISP-J':30,'NISP-H':30}
-    INPUT_EXPTIME = {'VIS':565,'NISP-Y':81,'NISP-J':81,'NISP-H':81}
-    INPUT_GAIN = {'VIS':2,'NISP-Y':1,'NISP-J':1,'NISP-H':1}
+    INPUT_ZP = {'VIS-DET':30.1,'VIS':30.1,'NISP-Y':30,'NISP-J':30,'NISP-H':30}
+    INPUT_EXPTIME = {'VIS-DET':30.1,'VIS':565,'NISP-Y':81,'NISP-J':81,'NISP-H':81}
+    INPUT_GAIN = {'VIS-DET':30.1,'VIS':2,'NISP-Y':1,'NISP-J':1,'NISP-H':1}
 
     # ------------------------------ GALAXIES/TARGETS ------------------------------
 
@@ -81,8 +81,8 @@ def initialize_params() :
     #49.8640400,41.6353100
     #50.0917500,41.6407200
     
-    TARGETS.append(['1 ERO-PERSEUS PERSEUS-JELLYFISH-1 49.8640400 41.6353100 70 VIS,NISP-Y,NISP-J,NISP-H MAKE_CAT ---'])
-    TARGETS.append(['2 ERO-PERSEUS PERSEUS-JELLYFISH-2 50.0917500 41.6407200 70 VIS,NISP-Y,NISP-J,NISP-H MAKE_CAT ---'])
+    TARGETS.append(['1 ERO-PERSEUS PERSEUS-JELLYFISH-1 49.8640400 41.6353100 73 VIS-DET,VIS,NISP-Y,NISP-J,NISP-H MAKE_CAT ---'])
+    TARGETS.append(['2 ERO-PERSEUS PERSEUS-JELLYFISH-2 50.0917500 41.6407200 73 VIS-DET,VIS,NISP-Y,NISP-J,NISP-H MAKE_CAT ---'])
     """
     from astropy.wcs import WCS
     from astropy.io import fits
@@ -115,6 +115,7 @@ def initialize_params() :
     """
     MERGE_CATS = False
     MERGE_SIM_GC_CATS = False
+    MERGE_GC_CATS = False
 
     # NOTE: possible methods -> RESAMPLE_DATA, MODEL_PSF, FIT_GAL, USE_SUB_GAL, MAKE_CAT, MAKE_GC_CAT
     # NOTE: possible comments -> MASSIVE,DWARF,LSB
@@ -136,7 +137,8 @@ def initialize_params() :
     BACKGROUND_ANNULUS_TICKNESS = 20 # the thickness of the background annulus in pixels
     CROSS_MATCH_RADIUS_ARCSEC = 0.25
     MAG_LIMIT_CAT = 28
-
+    EXTRACT_DWARFS = False
+    
     # -------------------------------- PSF MODELING -------------------------------
 
     ### if PSF is given by the user (in the "psf_dir" directory)

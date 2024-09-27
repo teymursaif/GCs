@@ -14,7 +14,7 @@ def initialize_params() :
     MAG_LIMIT_CAT, CROSS_MATCH_RADIUS_ARCSEC, GC_SIZE_RANGE, GC_MAG_RANGE, RATIO_OVERSAMPLE_PSF, PSF_PIXEL_SCALE, PSF_SIZE, MODEL_PSF, \
     PIXEL_SCALES, ZPS, PRIMARY_FRAME_SIZE, FRAME_SIZE, GAL_FRAME_SIZE, EXPTIME, GAIN, GC_REF_MAG, PSF_PIXELSCL_KEY, FWHM_LIMIT, INPUT_ZP, INPUT_EXPTIME, \
     MAG_LIMIT_SAT, MAG_LIMIT_PSF, GC_SEL_PARAMS, ELL_LIMIT_PSF, GC_SIM_MODE, MERGE_CATS, MERGE_SIM_GC_CATS, MERGE_GC_CATS, EXTRACT_DWARFS,\
-    PARAM_SEL_METHOD, PARAM_SEL_RANGE, EXTERNAL_CROSSMATCH, EXTERNAL_CROSSMATCH_CAT
+    PARAM_SEL_METHOD, PARAM_SEL_RANGE, EXTERNAL_CROSSMATCH, EXTERNAL_CROSSMATCH_CAT,APER_SIZE_IN_FWHM
     global SE_executable,galfit_executable,swarp_executable
 
     FWHMS_ARCSEC = {}
@@ -29,6 +29,7 @@ def initialize_params() :
     GAIN = {}
     INPUT_ZP = {}
     INPUT_EXPTIME = {}
+    APER_SIZE_IN_FWHM = {}
 
     ####################################################################################################
     ####################################################################################################
@@ -50,9 +51,9 @@ def initialize_params() :
     #swarp_executable = 'SWarp'
 
     ### (if ZP, EXPTIME and GAIN are missing from the header, define them for a given filter)
-    INPUT_ZP = {'VIS':30,'NISP-Y':30,'NISP-J':30,'NISP-H':30}
-    INPUT_EXPTIME = {'VIS':565,'NISP-Y':121,'NISP-J':116,'NISP-H':81}
-    INPUT_GAIN = {'VIS':2,'NISP-Y':1,'NISP-J':1,'NISP-H':1}
+    INPUT_ZP = {'VIS-DET':30.1,'VIS':30.1,'NISP-Y':30,'NISP-J':30,'NISP-H':30}
+    INPUT_EXPTIME = {'VIS-DET':565,'VIS':565,'NISP-Y':121,'NISP-J':116,'NISP-H':81}
+    INPUT_GAIN = {'VIS-DET':2,'VIS':2,'NISP-Y':1,'NISP-J':1,'NISP-H':1}
 
     # ------------------------------ GALAXIES/TARGETS ------------------------------
 
@@ -134,11 +135,11 @@ def initialize_params() :
         i = i+1
         ra, dec = coord
         if ((i>2) and (i<=40)):
-        #if i==3 :
-            #target_str = str(i) +' ERO-FORNAX FORNAX-DWARF-'+str(i)+' '+str(ra)+' '+str(dec)+' 20 VIS,NISP-Y,NISP-J,NISP-H MAKE_GC_CAT DWARF,LSB'
-            target_str = str(i) +' ERO-FORNAX FORNAX-DWARF-'+str(i)+' '+str(ra)+' '+str(dec)+' 20 VIS,NISP-Y,NISP-J,NISP-H MAKE_GC_CAT DWARF,LSB' #,NISP-Y,NISP-J,NISP-H
-            TARGETS.append([target_str])
-            #print (target_str)
+            if i>-1 :
+                #target_str = str(i) +' ERO-FORNAX FORNAX-DWARF-'+str(i)+' '+str(ra)+' '+str(dec)+' 20 VIS,NISP-Y,NISP-J,NISP-H MAKE_GC_CAT DWARF,LSB'
+                target_str = str(i) +' ERO-FORNAX FORNAX-DWARF-'+str(i)+' '+str(ra)+' '+str(dec)+' 20 VIS-DET,VIS,NISP-Y,NISP-J,NISP-H MAKE_CAT,MAKE_GC_CAT DWARF,LSB' #,NISP-Y,NISP-J,NISP-H
+                TARGETS.append([target_str])
+                #print (target_str)
 
     #TARGETS.append(['100 ERO-FORNAX FORNAX-DWARF-100 054.23864 -35.50702 20 VIS,NISP-Y,NISP-J,NISP-H MAKE_GC_CAT MASSIVE']) #FCC184
     #TARGETS.append(['101 ERO-FORNAX FORNAX-DWARF-101 054.13133 -35.29561 20 VIS,NISP-Y,NISP-J,NISP-H MAKE_GC_CAT MASSIVE']) #FCC170
@@ -175,7 +176,8 @@ def initialize_params() :
     BACKGROUND_ANNULUS_START = 3 #The size of background annulus for forced photoemtry as a factor of FWHM
     BACKGROUND_ANNULUS_TICKNESS = 20 # the thickness of the background annulus in pixels
     CROSS_MATCH_RADIUS_ARCSEC = 0.25
-    MAG_LIMIT_CAT = 27
+    MAG_LIMIT_CAT = 26
+    APER_SIZE_IN_FWHM = {'VIS-DET':3,'VIS':3,'NISP-Y':1.5,'NISP-J':1.5,'NISP-H':1.5}
     EXTRACT_DWARFS = False
 
     # -------------------------------- PSF MODELING -------------------------------
@@ -201,13 +203,13 @@ def initialize_params() :
     COSMIC_CLEAN = False #does not work at the moment anyways...
     GC_SIZE_RANGE = [2,6] #lower value should be small enough to make some point-sources for performance check, in pc
     GC_MAG_RANGE = [-11,-5]
-    GC_REF_MAG = {'VIS':-8, 'NISP-Y':-8.3,'NISP-J':-8.3,'NISP-H':-8.3} #magnitude of a typical GC in the given filters should be defined here.
+    GC_REF_MAG = {'VIS-DET':-8,'VIS':-8, 'NISP-Y':-8.45,'NISP-J':-8.45,'NISP-H':-8.45} #magnitude of a typical GC in the given filters should be defined here.
     GC_SIM_MODE = 'UNIFORM' # 'UNIFORM' or 'CONCENTRATED'
 
     #------------------------------ GC SELECTION -------------------------------
 
-    GC_SEL_PARAMS = ['CI_2_4','CI_4_8','CI_8_12']#,'CI_2_4','CI_4_6','CI_6_8','CI_8_10','CI_10_12','ELLIPTICITY']
-    EXTERNAL_CROSSMATCH = True
+    GC_SEL_PARAMS = ['CI_2_4_VIS','CI_4_8_VIS']#,'CI_2_4','CI_4_6','CI_6_8','CI_8_10','CI_10_12','ELLIPTICITY']
+    EXTERNAL_CROSSMATCH = False
     EXTERNAL_CROSSMATCH_CAT = './archival_tables/ERO-FDS-ugriJKs.fits'
 
     PARAM_SEL_METHOD = 'MANUAL'
@@ -226,7 +228,7 @@ def initialize_params() :
 
     input_dir = working_directory+'inputs_dwarfs/'
     output_dir = working_directory+'outputs_dwarfs/'
-    main_data_dir = working_directory+'ERO-data/ERO-FORNAX/'#input_dir+'main_data/'
+    main_data_dir = working_directory+'ERO-data/ERO-FORNAX-DEC/'#input_dir+'main_data/'
 
     data_dir = input_dir+'data/'
     psf_dir = input_dir+'psf/'

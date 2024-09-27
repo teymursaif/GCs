@@ -126,7 +126,10 @@ def estimate_fwhm(gal_id):
             #print (FWHM_x,FWHM_y)
             #print (FWHM_x*psf_pixel_scale ,FWHM_y*psf_pixel_scale)
             FWHMS_ARCSEC[fn] = np.mean([FWHM_x*psf_pixel_scale ,FWHM_y*psf_pixel_scale])
-            APERTURE_SIZE[fn] = 1.5*FWHMS_ARCSEC[fn] #1.0*FWHMS_ARCSEC[fn]
+            try :
+                APERTURE_SIZE[fn] = APER_SIZE_IN_FWHM[fn]*FWHMS_ARCSEC[fn] #1.0*FWHMS_ARCSEC[fn]
+            except:
+                APERTURE_SIZE[fn] = 2.0*FWHMS_ARCSEC[fn]
             print ('- FWHM in filter', fn, 'is', FWHMS_ARCSEC[fn], 'arcsec')
 
         else:
@@ -426,7 +429,7 @@ def simualte_GCs(gal_id,n):
             #center = str(xc+dx0)+','+str(yc+dy0)
             swarp_cmd = swarp_executable+' '+gc_file+' -c '+external_dir+'default.swarp -IMAGEOUT_NAME '+gc_file+'.resampled.fits'+\
                 ' -RESAMPLING_TYPE LANCZOS4 -CELESTIAL_TYPE PIXEL -IMAGE_SIZE 0 -PIXELSCALE_TYPE MANUAL -PIXEL_SCALE '+str(RATIO_OVERSAMPLE_PSF)+\
-                ' -RESAMPLE Y -CENTER_TYPE MANUAL -CENTER '+str(x1)+','+str(y1)+' -SUBTRACT_BACK N -VERBOSE_TYPE FULL'
+                ' -RESAMPLE Y -CENTER_TYPE MANUAL -CENTER '+str(x1)+','+str(y1)+'  -SUBTRACT_BACK N -VERBOSE_TYPE FULL' #-CENTER_TYPE MANUAL -CENTER '+str(x1)+','+str(y1)+' 
             #print (swarp_cmd)
             os.system(swarp_cmd)
 
@@ -477,7 +480,8 @@ def simualte_GCs(gal_id,n):
             #data1[x1:x2,y1:y2] = data1[x1:x2,y1:y2]+data2[x1_psf:x2_psf,y1_psf:y2_psf]
             #print (np.shape(data1[y1:y2,x1:x2]))
             #print (np.shape(data2[y1_psf:y2_psf,x1_psf:x2_psf]))
-            data1[y1:y2,x1:x2] = data1[y1:y2,x1:x2]+data2[y1_psf:y2_psf,x1_psf:x2_psf]
+            data1[y1+3:y2,x1+3:x2] = data1[y1+3:y2,x1+3:x2]+data2[y1_psf:y2_psf-3,x1_psf:x2_psf-3]
+        
 
         df['GC_ABS_MAG_'+fn] = GC_ABS_MAG_FILTER
         df['GC_MAG_'+fn] = GC_MAG_FILTER
@@ -490,9 +494,12 @@ def simualte_GCs(gal_id,n):
         add_fits_files(science_frame,art_dir+gal_name+'_'+fn+'_ART_'+str(n)+'.fits',art_dir+gal_name+'_'+fn+'_ART_'+str(n)+'.science.fits')
         print ('')
 
+        os.system('rm '+gc_file)
+
     df.to_csv(art_cat_name, index=False)
 
-    #os.system('rm '+art_dir+'*resampled.fits')
+    os.system('rm '+art_dir+'*_ART_*_GC_*.fits')
+    os.system('rm '+art_dir+'*resampled.fits')
     os.system('rm '+art_dir+'*noise.fits')
     os.system('rm '+art_dir+'*king.fits')
     os.system('rm '+art_dir+'*conv.fits')
@@ -528,9 +535,10 @@ def simulate_GC(mag,size_arcsec,zp,pix_size,exptime,psf_file,gc_file):
     hdul[0].data = stamp
     hdul.writeto(gc_file+'.conv.fits', overwrite=True)
 
-    stamp_noisy = np.random.normal(stamp*exptime,1*np.sqrt(stamp*exptime))#/RATIO_OVERSAMPLE_PSF
+    stamp_noisy = np.random.normal(stamp*exptime,np.sqrt(stamp*exptime))#/RATIO_OVERSAMPLE_PSF
     #print (stamp_noisy[20,20],stamp[20,20]*exptime,stamp_noisy[20,20]-stamp[20,20]*exptime)
     stamp_noisy = stamp_noisy/exptime
+    #stamp_noisy = stamp
 
     n = np.arange(100.0)
     hdu = fits.PrimaryHDU(n)
@@ -725,10 +733,10 @@ def make_psf_all_filters(gal_id):
         params.write('FLUXERR_APER('+str(1)+') #RMS error for AUTO flux [count]\n')
         params.close()
 
-        #if os.path.exists(source_cat):
-        #    donothing=1
-        #else:
-        os.system(command)
+        if os.path.exists(source_cat):
+            donothing=1
+        else:
+            os.system(command)
         ###
 
 
@@ -796,7 +804,7 @@ def make_psf_for_frame(main_frame,weight_frame,source_cat,filtername,psf_frame,m
 
     print ('- the lower and upper limits for FWHM (for selecting stars) are:',fwhm_min,fwhm_max)
     mask = ((sex_cat_data ['FWHM_IMAGE'] >= fwhm_min) & \
-    (sex_cat_data ['FWHM_IMAGE'] <= fwhm_max))
+    (sex_cat_data ['FWHM_IMAGE'] <= fwhm_max)) #fwhm_max
     #print (np.min(fwhm),np.max(fwhm))
     sex_cat_data = sex_cat_data[mask]
 

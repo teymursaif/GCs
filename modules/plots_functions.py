@@ -40,7 +40,7 @@ def assess_GC_simulations(gal_id):
 ############################################################
 
 def shorten_filter_name(filtername):
-    short_filternames = ['F606W','F814W','VIS','F475W','NISP-Y','NISP-J','NISP-H']
+    short_filternames = ['F606W','F814W','VIS','F475W','NISP-Y','NISP-J','NISP-H','DES-g','DES-r','DES-i']
     for short_filtername in short_filternames:
         if short_filtername in filtername :
             return short_filtername
@@ -72,7 +72,10 @@ def assess_GC_simulations_general(gal_id):
 
     n_filter = -1
     for fn in filters:
-        sfn = shorten_filter_name(fn)
+        try:
+            sfn = shorten_filter_name(fn)
+        except:
+            sfn = fn
         n_filter = n_filter+1
         #1. mag differance (dmag - mag) in all filters
         mag_source_obs = det_art_gcs['F_MAG_APER_CORR_'+fn]
@@ -129,6 +132,10 @@ def assess_GC_simulations_general(gal_id):
 
         if fn == fn_det:
             for i in range(len(GC_SEL_PARAMS)):
+
+                if PARAM_DESC[i] == 'color' :
+                    continue
+                    
                 if i == len(filters):
                     break
 

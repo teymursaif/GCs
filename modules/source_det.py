@@ -65,7 +65,7 @@ def prepare_sex_cat(source_cat_name_input,source_cat_name_output,gal_name,filter
             FWHM_limit_min = 4
             FWHM_limit_max = 99999
 
-    #print (FWHM_limit_min,FWHM_limit_max,MAG_LIMIT_CAT)
+    print (FWHM_limit_min,FWHM_limit_max,MAG_LIMIT_CAT)
     #print (len(sex_cat_data))
     mask = ((sex_cat_data['FLAGS'] < 4) & \
     (sex_cat_data ['ELLIPTICITY'] < 1) & \
@@ -241,7 +241,7 @@ def make_mask(frame, sex_source_cat, weight_frame, seg_map, mask_out, mask_out2,
 
 ############################################################
 
-def make_detection_frame(gal_id, input_frame, weight_frame, fn, output_frame, backsize=16, backfiltersize=1, iteration=1):
+def make_detection_frame(gal_id, input_frame, weight_frame, fn, output_frame, backsize=MEDIAN_FILTER_SIZE, backfiltersize=1, iteration=3): #3
     print ('- Making the detection frame for filter ', fn)
     gal_name, ra, dec, distance, filters, comments = gal_params[gal_id]
     data_name = gal_data_name[gal_id]
@@ -260,8 +260,8 @@ def make_detection_frame(gal_id, input_frame, weight_frame, fn, output_frame, ba
         # make segmentation map
         #if i == 0 :
         command = SE_executable+' '+temp_dir+gal_name+'.temp_det.fits'+' -c '+str(external_dir)+'default.sex -CATALOG_NAME '+temp_dir+gal_name+'.temp_sex_cat.fits'+str(i)+'.fits '+ \
-        '-PARAMETERS_NAME '+str(external_dir)+'sex_default.param -DETECT_MINAREA 4 -DETECT_MAXAREA 200 -DETECT_THRESH 1.5 -ANALYSIS_THRESH 1.5 ' + \
-        '-DEBLEND_NTHRESH 16 -DEBLEND_MINCONT 0.0001 ' + weight_command + \
+        '-PARAMETERS_NAME '+str(external_dir)+'sex_default.param -DETECT_MINAREA 3 -DETECT_MAXAREA 200 -DETECT_THRESH 1.5 -ANALYSIS_THRESH 1.5 ' + \
+        '-DEBLEND_NTHRESH 32 -DEBLEND_MINCONT 0.00001 ' + weight_command + \
         '-FILTER_NAME  '+str(external_dir)+'default.conv -STARNNW_NAME '+str(external_dir)+'default.nnw -PIXEL_SCALE ' + str(PIXEL_SCALES[filters[0]]) + ' ' \
         '-BACK_SIZE 256 -BACK_FILTERSIZE 3 -CHECKIMAGE_TYPE SEGMENTATION ' +  \
         '-CHECKIMAGE_NAME '+temp_dir+gal_name+'.temp_seg'+str(i)+'.fits'+' -VERBOSE_TYPE NORMAL'
@@ -277,8 +277,8 @@ def make_detection_frame(gal_id, input_frame, weight_frame, fn, output_frame, ba
             img1.writeto(temp_dir+gal_name+'.temp_seg'+str(i)+'.fits',overwrite=True)
 
         command = SE_executable+' '+temp_dir+gal_name+'.temp_det.fits'+' -c '+str(external_dir)+'default.sex -CATALOG_NAME '+temp_dir+gal_name+'.temp_sex_cat.fits'+str(i)+'.fits '+ \
-        '-PARAMETERS_NAME '+str(external_dir)+'sex_default.param -DETECT_MINAREA 4 -DETECT_MAXAREA 200 -DETECT_THRESH 1.5 -ANALYSIS_THRESH 1.5 ' + \
-        '-DEBLEND_NTHRESH 32 -DEBLEND_MINCONT 0.0001 ' + weight_command + \
+        '-PARAMETERS_NAME '+str(external_dir)+'sex_default.param -DETECT_MINAREA 3 -DETECT_THRESH 1.5 -ANALYSIS_THRESH 1.5 ' + \
+        '-DEBLEND_NTHRESH 32 -DEBLEND_MINCONT 0.00001 ' + weight_command + \
         '-FILTER_NAME  '+str(external_dir)+'default.conv -STARNNW_NAME '+str(external_dir)+'default.nnw -PIXEL_SCALE ' + str(PIXEL_SCALES[filters[0]]) + ' ' \
         '-BACK_SIZE '+ str(backsize)+' -BACK_FILTERSIZE '+ str(backfiltersize)+' -CHECKIMAGE_TYPE BACKGROUND,-BACKGROUND,APERTURES ' +  \
         '-CHECKIMAGE_NAME '+temp_dir+gal_name+'.temp_back'+str(i)+'.fits,'+temp_dir+gal_name+'.temp_-back'+str(i)+'.fits,'+temp_dir+gal_name+'.temp_aper'+str(i)+'.fits'+' -VERBOSE_TYPE NORMAL'
@@ -299,9 +299,11 @@ def make_detection_frame(gal_id, input_frame, weight_frame, fn, output_frame, ba
     data1 = data1-data2
     img1[0].data = data1
     img1.writeto(output_frame,overwrite=True)
+    img1.writeto(sex_dir+gal_name+'_'+fn+'_'+'-background'+'_cropped.fits',overwrite=True)
+
 
     #os.system('rm temp*.fits')
-    os.system('cp '+temp_dir+gal_name+'.temp_mask'+str(iteration)+'.fits'+' '+sex_dir+gal_name+'_'+fn+'_'+'mask'+'_cropped.fits')
+    os.system('cp '+temp_dir+gal_name+'.temp_mask'+str(iteration-1)+'.fits'+' '+sex_dir+gal_name+'_'+fn+'_'+'mask'+'_cropped.fits')
 
 ############################################################
 
@@ -383,8 +385,8 @@ def make_source_cat(gal_id):
         ####
         print (f"{bcolors.OKCYAN}- making source catalogs for point-sources"+ bcolors.ENDC)
         command = SE_executable+' '+detection_frame+','+frame+' -c '+external_dir+'default.sex -CATALOG_NAME '+source_cat_name+' '+ \
-        '-PARAMETERS_NAME '+external_dir+gal_name+'_default.param -DETECT_MINAREA 4 -DETECT_THRESH 1.5 -ANALYSIS_THRESH 1.5 ' + \
-        '-DEBLEND_NTHRESH 32 -DEBLEND_MINCONT 0.00001 ' + weight_command + ' -PHOT_APERTURES '+str(psf_dia_ref_pixel)+','+str(PHOTOM_APERS)+' -GAIN ' + str(gain) + ' ' \
+        '-PARAMETERS_NAME '+external_dir+gal_name+'_default.param -DETECT_MINAREA 3 -DETECT_THRESH 1.5 -ANALYSIS_THRESH 1.5 ' + \
+        '-DEBLEND_NTHRESH 32 -DEBLEND_MINCONT 0.000001 ' + weight_command + ' -PHOT_APERTURES '+str(psf_dia_ref_pixel)+','+str(PHOTOM_APERS)+' -GAIN ' + str(gain) + ' ' \
         '-MAG_ZEROPOINT ' +str(zp) + ' -BACKPHOTO_TYPE GLOBAL '+\
         '-FILTER Y -FILTER_NAME  '+external_dir+'tophat_1.5_3x3.conv -STARNNW_NAME '+external_dir+'default.nnw -PIXEL_SCALE ' + str(pix_size) + ' ' \
         '-BACK_SIZE 32 -BACK_FILTERSIZE 1 -CHECKIMAGE_TYPE APERTURES,FILTERED,BACKGROUND,-BACKGROUND,SEGMENTATION,BACKGROUND_RMS ' +  \
@@ -397,7 +399,7 @@ def make_source_cat(gal_id):
         print (f"{bcolors.OKCYAN}- making source catalogs for extended sources and LSBs"+ bcolors.ENDC)
         command_lsb = SE_executable+' '+frame+' -c '+external_dir+'default.sex -CATALOG_NAME '+source_cat_name_lsb+' '+ \
         '-PARAMETERS_NAME '+external_dir+gal_name+'_default.param -DETECT_MINAREA 400 -DETECT_THRESH 1.0 -ANALYSIS_THRESH 1.0 ' + \
-        '-DEBLEND_NTHRESH 8 -DEBLEND_MINCONT 0.001 ' + weight_command + ' -PHOT_APERTURES '+str(psf_dia_ref_pixel)+','+str(PHOTOM_APERS)+' -GAIN ' + str(gain) + ' ' \
+        '-DEBLEND_NTHRESH 32 -DEBLEND_MINCONT 0.0001 ' + weight_command + ' -PHOT_APERTURES '+str(psf_dia_ref_pixel)+','+str(PHOTOM_APERS)+' -GAIN ' + str(gain) + ' ' \
         '-MAG_ZEROPOINT ' +str(zp) + ' -BACKPHOTO_TYPE GLOBAL '+\
         '-FILTER Y -FILTER_NAME  '+external_dir+'default.conv -STARNNW_NAME '+external_dir+'default.nnw -PIXEL_SCALE ' + str(pix_size) + ' ' \
         '-BACK_SIZE 512 -BACK_FILTERSIZE 3 -CHECKIMAGE_TYPE APERTURES,FILTERED,BACKGROUND,-BACKGROUND,SEGMENTATION,BACKGROUND_RMS ' +  \
@@ -459,8 +461,9 @@ def make_multiwavelength_cat(gal_id, mode='forced-photometry'):
         os.system('rm '+output)
         shutil.copy(det_cat,output)
         for fn in filters:
-            photom_frame = data_dir+gal_name+'_'+fn+'_cropped.fits'
+            #photom_frame = data_dir+gal_name+'_'+fn+'_cropped.fits'
             #photom_frame = sex_dir+gal_name+'_'+fn+'_check_image_-background.fits'
+            photom_frame = sex_dir+gal_name+'_'+fn+'_'+'-background'+'_cropped.fits'
             mask_frame = sex_dir+gal_name+'_'+fn+'_'+'mask'+'_cropped.fits'
             back_rms_frame = sex_dir+gal_name+'_'+fn+'_check_image_back_rms.fits'
             print ("- Force photometry of frame in filter "+fn)
@@ -677,7 +680,7 @@ def forced_photometry(det_cat, photom_frame, mask_frame, back_rms_frame, fn, fn_
         flux_err = flux_err[0]
         sky_flux = sky_flux[0]
         sky_flux_err = sky_flux_err[0]
-        flux_sky_sub = float(flux)-float(sky_flux)/(sky_area/aper_area)
+        flux_sky_sub = float(flux)-0*float(sky_flux)/(sky_area/aper_area)
         if mode == 'aperture-corr':
             flux_total = ((flux_sky_sub) / (PSF_REF_RAD_FRAC[fn]))[0]
         elif mode == 'circular-aperture':
@@ -867,7 +870,7 @@ def make_source_cat_for_sim(gal_id):
         csv_to_fits(art_cat_name_csv,art_cat_name)
 
         source_cat_with_art = cats_dir+gal_name+'_master_cat_forced.fits'
-        crossmatch(art_cat_name,source_cat_with_art,'RA_GC','DEC_GC','RA','DEC',5.*PIXEL_SCALES[fn_det],fn_det,\
+        crossmatch(art_cat_name,source_cat_with_art,'RA_GC','DEC_GC','RA','DEC',3*PIXEL_SCALES[fn_det],fn_det,\
             art_dir+'temp'+str(n)+'.fits')
         tables.append(art_dir+'temp'+str(n)+'.fits')
         tables2.append(art_cat_name)

@@ -101,7 +101,7 @@ def initialize_params() :
             ra, dec = w.all_pix2world(yc,xc,0)
             #if m in [3,4,5,7,0,2,6,8] : #[1,3,4,5,7]  [0,2,6,8] 
             if m in [0,1,2,3,4,5,6,7,8]: #0,1,2,3,4,5,6,7,8
-                target_str = str(m)+' ERO-FORNAX ERO-FORNAX-'+str(m)+' '+str(ra)+' '+str(dec)+' 20 VIS-DET,VIS,NISP-Y,NISP-J,NISP-H SIM_GC ---' #MAKE_CAT,SIM_GC, ,NISP-Y,NISP-J,NISP-H
+                target_str = str(m)+' ERO-FORNAX ERO-FORNAX-'+str(m)+' '+str(ra)+' '+str(dec)+' 20 VIS-DET,VIS,NISP-Y,NISP-J,NISP-H MAKE_GC_CAT ---' #MAKE_CAT,SIM_GC, ,NISP-Y,NISP-J,NISP-H
                 #VIS-DET,VIS,NISP-Y,NISP-J,NISP-H
                 TARGETS.append([target_str])
             #print (target_str)
@@ -109,8 +109,8 @@ def initialize_params() :
     print (TARGETS)
 
     MERGE_CATS = False
-    MERGE_SIM_GC_CATS = True
-    MERGE_GC_CATS = False
+    MERGE_SIM_GC_CATS = False
+    MERGE_GC_CATS = True
 
     # NOTE: possible methods -> RESAMPLE_DATA, MODEL_PSF, FIT_GAL, USE_SUB_GAL, MAKE_CAT, MAKE_GC_CAT
     # NOTE: possible comments -> MASSIVE,DWARF,LSB
@@ -170,7 +170,7 @@ def initialize_params() :
 
     PARAM_SEL_METHOD = 'MANUAL'
     PARAM_SEL_RANGE = {'ELLIPTICITY':[0,0.5],'F_MAG_APER_CORR':[21,26],'F_MAG_APER_CORR_NISP-Y':[15,30],\
-    'color0':['VIS','VIS',-0.25,0.25],'color1':['VIS','NISP-Y',-0.1,0.7],'color2':['NISP-Y','NISP-J',-0.3,0.5],'color3':['NISP-J','NISP-H',-0.3,0.5]} #\
+    'color0':['VIS','VIS',-0.25,0.25],'color1':['VIS','NISP-Y',0,0.8],'color2':['NISP-Y','NISP-J',-0.3,0.5],'color3':['NISP-J','NISP-H',-0.3,0.5]} #\
     #'color5':['u','i',1.5,3.5], 'color6':['g','i',0.6,1.4], 'color7':['r','i',0,0.6], 'color8':['i','k',1,3.5]}   # clean selection
 
     #PARAM_SEL_RANGE = {'color1':['VIS','NISP-Y',-0.4,1.2],'color2':['NISP-Y','NISP-J',-0.5,0.5],'color3':['NISP-J','NISP-H',-0.3,0.4], \

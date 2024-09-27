@@ -49,7 +49,7 @@ def initialize_params() :
     #swarp_executable = 'SWarp'
 
     ### (if ZP, EXPTIME and GAIN are missing from the header, define them for a given filter)
-    INPUT_ZP = {'VIS':30,'NISP-Y':30,'NISP-J':30,'NISP-H':30}
+    INPUT_ZP = {'VIS':30.1,'NISP-Y':30,'NISP-J':30,'NISP-H':30}
     INPUT_EXPTIME = {'VIS':565,'NISP-Y':81,'NISP-J':81,'NISP-H':81}
     INPUT_GAIN = {'VIS':2,'NISP-Y':1,'NISP-J':1,'NISP-H':1}
 
@@ -78,7 +78,7 @@ def initialize_params() :
     #Euclid ERO
     TARGETS = []
     #PSF modeling for VIS
-    TARGETS.append(['0 ERO-PERSEUS ERO-PERSEUS-VIS-PSF 049.63837 +41.60172 20 VIS MODEL_PSF ---'])
+    TARGETS.append(['0 ERO-PERSEUS ERO-PERSEUS-VIS-PSF 049.63837 +41.60172 73 VIS MODEL_PSF ---'])
     # PSF modeling for NISP
     #TARGETS.append(['1 ERO-FORNAX ERO-FORNAX 053.96397 -35.26515 20 NISP-Y,NISP-J,NISP-H MODEL_PSF ---'])
 
@@ -115,10 +115,10 @@ def initialize_params() :
     ### for making PSF (method=MODEL_PSF)
     MODEL_PSF = True
     RATIO_OVERSAMPLE_PSF = 10 #do not go beyond 10, this will have consequences for undersampling later
-    PSF_IMAGE_SIZE = 40 #PSF size in the instruments pixel-scale
+    PSF_IMAGE_SIZE = 100 #PSF size in the instruments pixel-scale
     MAG_LIMIT_PSF = 20 #19 for NISP
     MAG_LIMIT_SAT = 19 #17 for NISP #saturation limit
-    ELL_LIMIT_PSF = 0.1
+    ELL_LIMIT_PSF = 0.05
     #FWHM_UPPER_LIMIT_PSF =
     #FWHM_LOWER_LIMIT_PSF =
 
